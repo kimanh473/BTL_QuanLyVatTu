@@ -21,11 +21,11 @@
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Mã vật tư</label>
                     <div class="col-sm-8">
-                        <select class="form-select" id="product_id">
+                        <select class="form-select" id="product_id" asp-for="product_id">
                             <option value="">Chọn mã vật tư</option>
                             @foreach (var product in ViewBag.ProductList)
                             {
-                                <option value="@product.product_id">@product.product_id</option>
+                                <option value="@product.product_id" >@product.product_id</option>
                             }
                         </select>
                         <span class="text-danger"></span>

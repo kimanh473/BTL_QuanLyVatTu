@@ -102,52 +102,11 @@ namespace QLVT.Controllers
 
             if (product == null)
                 return NotFound("Không tìm thấy sản phẩm.");
-
+            
             return Json(product);
         }
 
 
-        //[HttpPost]
-        //public async Task<IActionResult> Export(ProductDtoex model)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        ViewBag.ProductList = await context.ListProduct.ToListAsync();
-        //        return View(model);
-        //    }
-        //    //Lưu thông tin lịch sử xuất kho vào ListExport
-        //    Export export = new Export()
-        //    {
-        //        doc_id = model.doc_id,
-        //        export_date = DateTime.Now,
-        //        product_id = model.product_id,
-        //        product_name = model.product_name,
-        //        product_type = model.product_type,
-        //        quantity = model.quantity,
-        //        currency = model.currency,
-        //        export_price = model.export_price,
-        //        total = model.total,
-        //        promoter = model.promoter,
-        //        receiver = model.receiver,
-        //        note = model.note
-        //    };
-
-        //    context.ListExport.Add(export);
-
-        //    //Cập nhật số lượng và thành tiền cho ListProduct
-        //    var product = await context.ListProduct
-        //            .FirstOrDefaultAsync(p => p.product_id == model.product_id);
-
-        //    if (product != null)
-        //    {
-        //         product.quantity -= model.quantity;// Giảm số lượng trong kho
-        //         product.total = product.import_price * model.quantity;
-
-        //         context.ListProduct.Update(product);
-        //    }
-        //    context.SaveChanges();
-        //    return RedirectToAction("ListProduct", "List");
-        //}
         [HttpPost]
         public async Task<IActionResult> Export(ProductDtoex model)
         {
@@ -193,17 +152,7 @@ namespace QLVT.Controllers
                 return View(model);
             }
 
-            try
-            {
-                await context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", $"Lỗi lưu dữ liệu: {ex.Message}");
-                ViewBag.ProductList = await context.ListProduct.ToListAsync();
-                return View(model);
-            }
-            //context.SaveChanges();
+            context.SaveChanges();
             return RedirectToAction("ListProduct", "List");
         }
 

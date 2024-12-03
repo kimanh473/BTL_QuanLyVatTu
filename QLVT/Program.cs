@@ -6,15 +6,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString)
-           .EnableSensitiveDataLogging() // Hi?n th? d? li?u chi ti?t
-           .LogTo(Console.WriteLine, LogLevel.Information));
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//{
-//    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-//    options.UseSqlServer(connectionString)
-//});
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(connectionString);
+});
 
 var app = builder.Build();
 
