@@ -2,15 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using QLVT.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    options.UseSqlServer(connectionString);
-});
+    options.UseSqlServer(connectionString)
+           .EnableSensitiveDataLogging() // Hi?n th? d? li?u chi ti?t
+           .LogTo(Console.WriteLine, LogLevel.Information));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+//    options.UseSqlServer(connectionString)
+//});
 
 var app = builder.Build();
 
@@ -32,5 +36,6 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
 
 app.Run();

@@ -14,6 +14,7 @@ namespace QLVT.Controllers
             this.context = context;
         }
 
+        ////Lấy dữ liệu lên view ListProduct kèm bộ lọc Tìm kiếm
         public async Task<IActionResult> ListProduct(string searchString)
         {
             var products = await context.ListProduct.OrderByDescending(p => p.id).ToListAsync();
@@ -24,6 +25,8 @@ namespace QLVT.Controllers
             }
             return View(products);
         }
+
+        //Xuất file excel
         [HttpPost]
         public IActionResult ExportToExcel(string htmlTable)
         {
@@ -49,25 +52,163 @@ namespace QLVT.Controllers
             return File(byteArray, "application/vnd.ms-excel", "DSTonKho.xls");
         }
 
+        //Lấy dữ liệu lên view ListImport
         public async Task<IActionResult> ListImport()
         {
-            var imports = await context.ListImport.OrderByDescending(p => p.id).Take(5).ToListAsync();
+            var imports = await context.ListImport.OrderByDescending(p => p.id).ToListAsync();
             return View(imports);
         }
 
+        //Lấy dữ liệu lên view ListExport
         public async Task<IActionResult> ListExport()
         {
-            var exports = await context.ListExport.OrderByDescending(p => p.id).Take(5).ToListAsync();
+            var exports = await context.ListExport.OrderByDescending(p => p.id).ToListAsync();
             return View(exports);
         }
         public IActionResult Import()
         {
             return View();
         }
-        public IActionResult Export()
+
+        public async Task<IActionResult> Export()
         {
+            var productList = await context.ListProduct
+                .Select(p => new { p.product_id })
+                .ToListAsync();
+
+            ViewBag.ProductList = productList;
+
             return View();
         }
+
+    //Lấy dữ liệu từ product_id đã chọn lên Export
+        [HttpGet]
+        public async Task<IActionResult> GetProductDetails(string product_id_detail)
+        {
+            if (string.IsNullOrEmpty(product_id_detail))
+                return BadRequest("Product ID không hợp lệ.");
+
+            var product = await context.ListProduct
+                .Where(p => p.product_id == product_id_detail)
+                .Select(p => new
+                {
+                    p.product_id,
+                    p.product_name,
+                    p.product_type,
+                    p.quantity,
+                    p.currency
+                })
+                .FirstOrDefaultAsync();
+
+            if (product == null)
+                return NotFound("Không tìm thấy sản phẩm.");
+
+            return Json(product);
+        }
+
+
+        //[HttpPost]
+        //public async Task<IActionResult> Export(ProductDtoex model)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        ViewBag.ProductList = await context.ListProduct.ToListAsync();
+        //        return View(model);
+        //    }
+        //    //Lưu thông tin lịch sử xuất kho vào ListExport
+        //    Export export = new Export()
+        //    {
+        //        doc_id = model.doc_id,
+        //        export_date = DateTime.Now,
+        //        product_id = model.product_id,
+        //        product_name = model.product_name,
+        //        product_type = model.product_type,
+        //        quantity = model.quantity,
+        //        currency = model.currency,
+        //        export_price = model.export_price,
+        //        total = model.total,
+        //        promoter = model.promoter,
+        //        receiver = model.receiver,
+        //        note = model.note
+        //    };
+
+        //    context.ListExport.Add(export);
+
+        //    //Cập nhật số lượng và thành tiền cho ListProduct
+        //    var product = await context.ListProduct
+        //            .FirstOrDefaultAsync(p => p.product_id == model.product_id);
+
+        //    if (product != null)
+        //    {
+        //         product.quantity -= model.quantity;// Giảm số lượng trong kho
+        //         product.total = product.import_price * model.quantity;
+
+        //         context.ListProduct.Update(product);
+        //    }
+        //    context.SaveChanges();
+        //    return RedirectToAction("ListProduct", "List");
+        //}
+        [HttpPost]
+        public async Task<IActionResult> Export(ProductDtoex model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.ProductList = await context.ListProduct.ToListAsync();
+                return View(model);
+            }
+            // Lưu thông tin lịch sử xuất kho vào ListExport
+            Export export = new Export()
+            {
+                doc_id = model.doc_id,
+                export_date = DateTime.Now,
+                product_id = model.product_id,
+                product_name = model.product_name,
+                product_type = model.product_type,
+                quantity = model.quantity,
+                currency = model.currency,
+                export_price = model.export_price,
+                total = model.export_price * model.quantity, // Tính tổng
+                promoter = model.promoter,
+                receiver = model.receiver,
+                note = model.note
+            };
+
+            context.ListExport.Add(export);
+
+            // Cập nhật số lượng và thành tiền cho ListProduct
+            var product = await context.ListProduct
+                .FirstOrDefaultAsync(p => p.product_id == model.product_id);
+
+            if (product != null)
+            {
+                
+                product.quantity -= model.quantity; // Giảm số lượng trong kho
+                product.total = product.import_price * product.quantity; // Cập nhật thành tiền
+                context.ListProduct.Update(product);
+            }
+            else
+            {
+                ModelState.AddModelError("", "Không tìm thấy sản phẩm.");
+                ViewBag.ProductList = await context.ListProduct.ToListAsync();
+                return View(model);
+            }
+
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Lỗi lưu dữ liệu: {ex.Message}");
+                ViewBag.ProductList = await context.ListProduct.ToListAsync();
+                return View(model);
+            }
+            //context.SaveChanges();
+            return RedirectToAction("ListProduct", "List");
+        }
+
+
+        //Lưu thông tin nhập kho vào 2 bảng ListProduct và ListImport
         [HttpPost]
         public IActionResult Import(ProductDto productDto)
         {
@@ -75,7 +216,6 @@ namespace QLVT.Controllers
             {
                 return View(productDto);
             }
-
             Product product = new Product()
             {
                 import_date = DateTime.Now,
@@ -88,7 +228,6 @@ namespace QLVT.Controllers
                 total = productDto.total,
             };
             context.ListProduct.Add(product);
-
             Import import = new Import()
             {
                 doc_id = productDto.doc_id,
@@ -105,11 +244,11 @@ namespace QLVT.Controllers
                 note = productDto.note,
             };
             context.ListImport.Add(import);
-
             context.SaveChanges();
-
             return RedirectToAction("ListProduct", "List");
         }
+
+    //Xóa 1sp khỏi ListProduct
         public IActionResult Delete(int id)
         {
             var product = context.ListProduct.Find(id);
@@ -122,47 +261,8 @@ namespace QLVT.Controllers
             return RedirectToAction("ListProduct", "List");
         }
 
-        [HttpPost]
-        public IActionResult Export(ProductDtoex productDtoex)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View(productDtoex);
-            }
 
-            Product product = new Product()
-            {
-                import_date = DateTime.Now,
-                product_id = productDtoex.product_id,
-                product_name = productDtoex.product_name,
-                product_type = productDtoex.product_type,
-                quantity = productDtoex.quantity,
-                currency = productDtoex.currency,
-                import_price = productDtoex.export_price,
-                total = productDtoex.total,
-            };
-            context.ListProduct.Add(product);
 
-            Export export = new Export()
-            {
-                doc_id = productDtoex.doc_id,
-                export_date = DateTime.Now,
-                product_id = productDtoex.product_id,
-                product_name = productDtoex.product_name,
-                product_type = productDtoex.product_type,
-                quantity = productDtoex.quantity,
-                currency = productDtoex.currency,
-                export_price = productDtoex.export_price,
-                total = productDtoex.total,
-                promoter = productDtoex.promoter,
-                receiver = productDtoex.receiver,
-                note = productDtoex.note,
-            };
-            context.ListExport.Add(export);
 
-            context.SaveChanges();
-
-            return RedirectToAction("ListProduct", "List");
-        }
-    } 
+    }
 }

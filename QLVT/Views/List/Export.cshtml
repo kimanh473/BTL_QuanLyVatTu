@@ -21,42 +21,48 @@
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Mã vật tư</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="product_id" />
-                        <span asp-validation-for="product_id" class="text-danger"></span>
+                        <select class="form-select" id="product_id">
+                            <option value="">Chọn mã vật tư</option>
+                            @foreach (var product in ViewBag.ProductList)
+                            {
+                                <option value="@product.product_id">@product.product_id</option>
+                            }
+                        </select>
+                        <span class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Tên vật tư</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="product_name" />
+                        <input class="form-control" id="product_name" asp-for="product_name" readonly />
                         <span asp-validation-for="product_name" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Loại hàng</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="product_type" />
+                        <input class="form-control" id="product_type" asp-for="product_type" readonly />
                         <span asp-validation-for="product_type" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Số lượng</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="quantity" />
+                        <input class="form-control" id="quantity" asp-for="quantity" />
                         <span asp-validation-for="quantity" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row-mb-3">
                     <label class="col-sm-4 col-form-label">Đơn vị sản phẩm</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="currency" />
+                        <input class="form-control" id="currency" asp-for="currency" readonly />
                         <span asp-validation-for="currency" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row-mb-3">
-                    <label class="col-sm-4 col-form-label">Đơn giá</label>
+                    <label class="col-sm-4 col-form-label">Đơn giá xuất</label>
                     <div class="col-sm-8">
-                        <input class="form-control" asp-for="export_price" />
+                        <input class="form-control" id="export_price" asp-for="export_price" />
                         <span asp-validation-for="export_price" class="text-danger"></span>
                     </div>
                 </div>
@@ -104,24 +110,58 @@
         </div>
 
             <script>
+                //Tự động fill dữ liệu
                 document.addEventListener("DOMContentLoaded", function () {
-                    // Lấy các phần tử input
+                    const productDropdown = document.getElementById("product_id");
+                    let maxQuantity = 0;
+
+                    productDropdown.addEventListener("change", function () {
+                        const product_id_detail = productDropdown.value;
+
+                        if (product_id_detail) {
+                            fetch(`/List/GetProductDetails?product_id_detail=${product_id_detail}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data) {
+                                        const productNameInput = document.getElementById("product_name");
+                                        const productTypeInput = document.getElementById("product_type");
+                                        const currencyInput = document.getElementById("currency");                                      
+                                        const quantityInput = document.getElementById("quantity");
+
+                                        if (productNameInput) productNameInput.value = data.product_name;
+                                        if (productTypeInput) productTypeInput.value = data.product_type;
+                                        if (currencyInput) currencyInput.value = data.currency;
+                                        if (quantityInput) quantityInput.value = data.quantity;
+                                        
+                                        maxQuantity = data.quantity;
+                                    }
+                                })
+                                .catch(error => console.error('Error:', error));
+                        }
+                    });
+
+                    // Tính toán tổng và kiểm tra số lượng
                     const quantityInput = document.getElementById("quantity");
                     const exportPriceInput = document.getElementById("export_price");
                     const totalInput = document.getElementById("total");
 
-                    // Hàm tính toán giá trị tổng
                     function calculateTotal() {
-                        const quantity = parseInt(quantityInput.value) || 0; // Lấy giá trị số lượng
-                        const exportPrice = parseFloat(exportPriceInput.value) || 0; // Lấy giá trị đơn giá
-                        const total = quantity * exportPrice; // Tính tổng
-                        totalInput.value = total.toFixed(0); // Gán giá trị vào trường "total"
+                        const quantity = parseInt(quantityInput.value) || 0;
+                        const exportPrice = parseFloat(exportPriceInput.value) || 0;
+
+                        // Kiểm tra số lượng nhập vào
+                        if (quantity > maxQuantity) {
+                            alert(`Số lượng không được vượt quá ${maxQuantity}`);
+                            quantityInput.value = maxQuantity; // Reset về giá trị tối đa
+                        }
+
+                        const total = quantity * exportPrice;
+                        totalInput.value = total.toFixed(0);
                     }
 
-                    // Thêm sự kiện onchange vào các ô nhập liệu
-                    quantityInput.addEventListener("input", calculateTotal);
-                    exportPriceInput.addEventListener("input", calculateTotal);
-                });
+                    if (quantityInput) quantityInput.addEventListener("input", calculateTotal);
+                    if (exportPriceInput) exportPriceInput.addEventListener("input", calculateTotal);
+                 });
             </script>
             <style>
                 .btn-outline-primary:hover {
